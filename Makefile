@@ -1,7 +1,25 @@
-obj-m = xt_FULLCONENAT.o
-CFLAGS_xt_FULLCONENAT.o := ${CFLAGS}
-KVERSION = $(shell uname -r)
+DESTDIR ?= /
+DESTDIR_TMP := $(shell readlink -f $(DESTDIR))
+SHELL = bash
+
 all:
-	make -C /lib/modules/$(KVERSION)/build M=$(PWD) modules
+	$(MAKE) -C ipt
+	$(MAKE) -C src
+install:
+	$(MAKE) -C ipt DESTDIR=$(DESTDIR_TMP) install
+	$(MAKE) -C src DESTDIR=$(DESTDIR_TMP) install
 clean:
-	make -C /lib/modules/$(KVERSION)/build M=$(PWD) clean
+	$(MAKE) -C src clean
+	$(MAKE) -C ipt clean
+dkms-install:
+	. ./dkms.conf; \
+		mkdir /usr/src/$${PACKAGE_NAME}-$${PACKAGE_VERSION}; \
+		cp -r * /usr/src/$${PACKAGE_NAME}-$${PACKAGE_VERSION}; \
+		dkms add -m $${PACKAGE_NAME} -v $${PACKAGE_VERSION}; \
+		dkms build -m $${PACKAGE_NAME} -v $${PACKAGE_VERSION}; \
+		dkms install -m $${PACKAGE_NAME} -v $${PACKAGE_VERSION}
+dkms-uninstall:
+	. ./dkms.conf; \
+		dkms uninstall -m $${PACKAGE_NAME} -v $${PACKAGE_VERSION}; \
+		dkms remove -m $${PACKAGE_NAME} -v $${PACKAGE_VERSION} --all; \
+		rm -rf /usr/src/$${PACKAGE_NAME}-$${PACKAGE_VERSION}
